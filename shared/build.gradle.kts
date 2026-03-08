@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
+    id("maven-publish")
 }
 
 kotlin {
@@ -45,5 +46,39 @@ android {
     }
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
+    }
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
+}
+
+// Публикация в GitHub Packages (Maven) — чтобы другие Android-проекты могли подтянуть shared как зависимость
+group = "com.example.faked_kmp"
+version = "1.0.0"
+
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/DmitryZaev/FAKED_KMP")
+            credentials {
+                username = project.findProperty("gpr.user")?.toString() ?: System.getenv("GITHUB_ACTOR")
+                password = project.findProperty("gpr.key")?.toString() ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}
+
+afterEvaluate {
+    publishing.publications {
+        create<MavenPublication>("release") {
+            from(components["release"])
+            groupId = "com.example.faked_kmp"
+            artifactId = "shared"
+            version = project.version.toString()
+        }
     }
 }
